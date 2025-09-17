@@ -2,8 +2,6 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Difficulty, Question, QuestionType } from '../types';
 import { QUESTIONS_PER_ROUND } from '../constants';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-
 const questionSchema = {
     type: Type.ARRAY,
     items: {
@@ -31,7 +29,8 @@ const getDifficultyPrompt = (difficulty: Difficulty): string => {
     }
 }
 
-export const generateQuestionsForGame = async (difficulty: Difficulty): Promise<Question[]> => {
+export const generateQuestionsForGame = async (apiKey: string, difficulty: Difficulty): Promise<Question[]> => {
+    const ai = new GoogleGenAI({ apiKey });
     const prompt = `
         You are an English grammar expert creating questions for a learning game for 10-13 year olds.
         The game teaches the correct usage of the relative pronouns 'who', 'that', and 'which'.
@@ -81,7 +80,8 @@ const validationSchema = {
 };
 
 
-export const validateSentenceWithAI = async (sentence: string, targetWord: 'who' | 'which' | 'that'): Promise<{ isValid: boolean; feedback: string }> => {
+export const validateSentenceWithAI = async (apiKey: string, sentence: string, targetWord: 'who' | 'which' | 'that'): Promise<{ isValid: boolean; feedback: string }> => {
+    const ai = new GoogleGenAI({ apiKey });
     const prompt = `
         As an English grammar expert, evaluate the following sentence from a 12-year-old student.
         The student was asked to write a sentence correctly using the word "${targetWord}".

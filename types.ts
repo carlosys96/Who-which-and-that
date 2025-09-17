@@ -11,15 +11,17 @@ export enum Difficulty {
   HARD = 'hard',
 }
 
+// FIX: Add WRITE_SENTENCE to support more question types from the Gemini API.
 export enum QuestionType {
     FILL_IN_THE_BLANK = 'fill-in-the-blank',
     WRITE_SENTENCE = 'write-sentence',
 }
 
+// FIX: Update Question interface to be more flexible for different question types.
 export interface Question {
   type: QuestionType;
-  sentence: string; // For fill-in-the-blank, contains '___'
-  prompt?: string; // For write-sentence, e.g., "Write a sentence using 'who'..."
+  sentence?: string; // Contains '___', now optional for other question types.
+  prompt?: string; // Add prompt for WRITE_SENTENCE questions.
   correctAnswer: 'who' | 'which' | 'that';
   options: ('who' | 'which' | 'that')[];
   explanation: string;

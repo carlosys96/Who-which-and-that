@@ -11,23 +11,18 @@ interface GameScreenProps {
   questionNumber: number;
   totalQuestions: number;
   score: number;
-  validateSentence: (sentence: string, targetWord: 'who' | 'which' | 'that') => Promise<{ isValid: boolean; feedback: string }>;
 }
 
-const GameScreen: React.FC<GameScreenProps> = ({ question, onAnswer, onNextQuestion, questionNumber, totalQuestions, score, validateSentence }) => {
+const GameScreen: React.FC<GameScreenProps> = ({ question, onAnswer, onNextQuestion, questionNumber, totalQuestions, score }) => {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [userSentence, setUserSentence] = useState('');
   const [answered, setAnswered] = useState(false);
 
   useEffect(() => {
     setSelectedAnswer(null);
     setFeedback(null);
     setIsCorrect(null);
-    setIsSubmitting(false);
-    setUserSentence('');
     setAnswered(false);
   }, [question]);
 
@@ -41,18 +36,11 @@ const GameScreen: React.FC<GameScreenProps> = ({ question, onAnswer, onNextQuest
     onAnswer({ userAnswer: option, isCorrect: correct });
   };
 
-  const handleWriteSentenceSubmit = async () => {
-    if (answered || userSentence.trim().length < 5) return;
-    setIsSubmitting(true);
-    const result = await validateSentence(userSentence, question.correctAnswer);
-    setIsCorrect(result.isValid);
-    setFeedback(result.feedback);
-    onAnswer({ userAnswer: userSentence, isCorrect: result.isValid });
-    setAnswered(true);
-    setIsSubmitting(false);
-  };
-
   const renderFillInTheBlank = () => {
+    // FIX: Add a guard for question.sentence, which is now optional to support new question types.
+    if (question.type !== QuestionType.FILL_IN_THE_BLANK || !question.sentence) {
+        return <div className="text-center text-slate-300">This question type is not supported yet.</div>;
+    }
     const parts = question.sentence.split('___');
     return (
       <div>
@@ -87,29 +75,6 @@ const GameScreen: React.FC<GameScreenProps> = ({ question, onAnswer, onNextQuest
     );
   };
 
-  const renderWriteSentence = () => {
-    return (
-        <div>
-            <p className="text-2xl text-slate-200 leading-relaxed text-center p-6 bg-slate-700/50 rounded-lg mb-6">
-                {question.prompt || `Write a sentence using the word "${question.correctAnswer}".`}
-            </p>
-            <div className="flex flex-col gap-4">
-                 <textarea
-                    value={userSentence}
-                    onChange={(e) => setUserSentence(e.target.value)}
-                    placeholder="Type your sentence here..."
-                    disabled={answered}
-                    className="w-full p-3 bg-slate-700 border-2 border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200 text-lg"
-                    rows={3}
-                />
-                <Button onClick={handleWriteSentenceSubmit} disabled={answered || userSentence.trim().length < 5 || isSubmitting}>
-                    {isSubmitting ? 'Checking...' : 'Check My Sentence'}
-                </Button>
-            </div>
-        </div>
-    );
-  };
-
   return (
     <Card>
       <div className="mb-6 flex justify-between items-center text-slate-300">
@@ -117,9 +82,7 @@ const GameScreen: React.FC<GameScreenProps> = ({ question, onAnswer, onNextQuest
         <span className="font-semibold text-xl text-cyan-400">Score: {score}</span>
       </div>
       
-      {!question ? <Loader message="Loading question..." /> : (
-          question.type === QuestionType.WRITE_SENTENCE ? renderWriteSentence() : renderFillInTheBlank()
-      )}
+      {!question ? <Loader message="Loading question..." /> : renderFillInTheBlank()}
 
       {feedback && (
         <div className={`mt-6 p-4 rounded-lg text-center transition-opacity duration-500 ${isCorrect ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'}`}>

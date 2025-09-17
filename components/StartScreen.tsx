@@ -12,47 +12,6 @@ interface StartScreenProps {
   roundHistory: AnswerRecord[];
 }
 
-const REVIEW_PASSWORD = "270219";
-
-const PasswordPrompt: React.FC<{onCorrect: () => void; onCancel: () => void}> = ({ onCorrect, onCancel }) => {
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (password === REVIEW_PASSWORD) {
-            onCorrect();
-        } else {
-            setError('Incorrect password.');
-            setPassword('');
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-                <form onSubmit={handleSubmit}>
-                    <h2 className="text-2xl font-bold text-center text-cyan-400 mb-4">Enter Password</h2>
-                    <p className="text-slate-400 text-center mb-6">Enter the password to review your answers.</p>
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Password"
-                        aria-label="Enter password"
-                        className="w-full p-3 bg-slate-700 border-2 border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200 text-lg mb-4"
-                    />
-                    {error && <p className="text-red-400 text-center mb-4">{error}</p>}
-                    <div className="flex gap-4">
-                        <Button type="button" onClick={onCancel} variant="secondary" className="w-full">Cancel</Button>
-                        <Button type="submit" className="w-full">Submit</Button>
-                    </div>
-                </form>
-            </Card>
-        </div>
-    );
-};
-
 const ReviewModal: React.FC<{history: AnswerRecord[]; onClose: () => void}> = ({ history, onClose }) => {
     return (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-40 p-4">
@@ -65,10 +24,11 @@ const ReviewModal: React.FC<{history: AnswerRecord[]; onClose: () => void}> = ({
                     {history.map((record, index) => (
                         <div key={index} className="bg-slate-900/70 p-4 rounded-lg border border-slate-700">
                             <p className="font-semibold text-slate-300 mb-2">Question {index + 1}</p>
+                            {/* FIX: Handle different question types to prevent crashes if `sentence` is missing. */}
                             <p className="text-lg text-white mb-3 bg-slate-700/50 p-3 rounded">
-                                {record.question.type === QuestionType.FILL_IN_THE_BLANK 
+                                {record.question.type === QuestionType.FILL_IN_THE_BLANK && record.question.sentence
                                     ? record.question.sentence.replace('___', `[${record.question.correctAnswer}]`)
-                                    : record.question.prompt
+                                    : (record.question.prompt || 'Unsupported question format.')
                                 }
                             </p>
                             <p className={`font-semibold mb-1 p-2 rounded ${record.isCorrect ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'}`}>
@@ -90,7 +50,6 @@ const ReviewModal: React.FC<{history: AnswerRecord[]; onClose: () => void}> = ({
 
 const StartScreen: React.FC<StartScreenProps> = ({ onStartGame, onShowScores, error, scores, roundHistory }) => {
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
-  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
   const [showReview, setShowReview] = useState(false);
 
   const difficultyOptions: { value: Difficulty; label: string; description: string }[] = [
@@ -136,7 +95,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStartGame, onShowScores, er
               View All Scores
             </Button>
             {roundHistory && roundHistory.length > 0 && (
-                <Button onClick={() => setShowPasswordPrompt(true)} variant="secondary" className="w-full sm:w-auto">
+                <Button onClick={() => setShowReview(true)} variant="secondary" className="w-full sm:w-auto">
                     Review Last Round
                 </Button>
             )}
@@ -161,16 +120,6 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStartGame, onShowScores, er
         </div>
       </Card>
       
-      {showPasswordPrompt && (
-        <PasswordPrompt 
-            onCorrect={() => {
-                setShowPasswordPrompt(false);
-                setShowReview(true);
-            }}
-            onCancel={() => setShowPasswordPrompt(false)}
-        />
-      )}
-
       {showReview && (
           <ReviewModal history={roundHistory} onClose={() => setShowReview(false)} />
       )}

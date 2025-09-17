@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { GameState, Difficulty, Question, Score, AnswerRecord } from './types';
-import { generateQuestionsForGame, validateSentenceWithAI } from './services/geminiService';
+import { getStaticQuestions } from './data/staticQuestions';
 import StartScreen from './components/StartScreen';
 import GameScreen from './components/GameScreen';
 import GameOverScreen from './components/GameOverScreen';
@@ -20,23 +20,30 @@ const App: React.FC = () => {
   const [highScores, setHighScores] = useLocalStorage<Score[]>('grammar-guardians-scores', []);
   const [lastRoundHistory, setLastRoundHistory] = useState<AnswerRecord[]>([]);
 
-  const startGame = useCallback(async (selectedDifficulty: Difficulty) => {
+  const startGame = useCallback((selectedDifficulty: Difficulty) => {
     setIsLoading(true);
     setError(null);
     setDifficulty(selectedDifficulty);
-    try {
-      const fetchedQuestions = await generateQuestionsForGame(selectedDifficulty);
-      setQuestions(fetchedQuestions);
-      setCurrentQuestionIndex(0);
-      setScore(0);
-      setLastRoundHistory([]);
-      setGameState(GameState.PLAYING);
-    } catch (err) {
-      setError('Failed to generate questions. Please check your API key and try again.');
-      setGameState(GameState.START);
-    } finally {
-      setIsLoading(false);
-    }
+
+    // Simulate a short delay for a smoother loading experience
+    setTimeout(() => {
+      try {
+        const fetchedQuestions = getStaticQuestions(selectedDifficulty);
+        if (fetchedQuestions.length < QUESTIONS_PER_ROUND) {
+            throw new Error("Not enough questions available for this difficulty.");
+        }
+        setQuestions(fetchedQuestions);
+        setCurrentQuestionIndex(0);
+        setScore(0);
+        setLastRoundHistory([]);
+        setGameState(GameState.PLAYING);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to start the game.');
+        setGameState(GameState.START);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 500);
   }, []);
 
   const handleAnswer = (details: { userAnswer: string; isCorrect: boolean }) => {
@@ -79,7 +86,7 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     if (isLoading) {
-      return <Loader message="Generating your grammar challenge..." />;
+      return <Loader message="Preparing your grammar challenge..." />;
     }
 
     switch (gameState) {
@@ -92,7 +99,6 @@ const App: React.FC = () => {
             questionNumber={currentQuestionIndex + 1}
             totalQuestions={QUESTIONS_PER_ROUND}
             score={score}
-            validateSentence={validateSentenceWithAI}
           />
         );
       case GameState.GAME_OVER:
@@ -108,7 +114,7 @@ const App: React.FC = () => {
       default:
         return <StartScreen 
                   onStartGame={startGame} 
-                  onShowScores={viewHighScores} 
+                  onShowScores={viewHighScores}
                   error={error} 
                   scores={highScores}
                   roundHistory={lastRoundHistory}
