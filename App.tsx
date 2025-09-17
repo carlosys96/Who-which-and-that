@@ -1,37 +1,36 @@
-
 import React, { useState, useCallback } from 'react';
-import { GameState, Difficulty } from './types.js';
-import { getStaticQuestions } from './data/staticQuestions.js';
-import { generateQuestionsForGame } from './services/geminiService.js';
-import StartScreen from './components/StartScreen.js';
-import GameScreen from './components/GameScreen.js';
-import GameOverScreen from './components/GameOverScreen.js';
-import HighScoresScreen from './components/HighScoresScreen.js';
-import ApiKeyScreen from './components/ApiKeyScreen.js';
-import Loader from './components/common/Loader.js';
-import { QUESTIONS_PER_ROUND } from './constants.js';
-import useLocalStorage from './hooks/useLocalStorage.js';
-import useSessionStorage from './hooks/useSessionStorage.js';
+import { GameState, Difficulty, Question, Score, AnswerRecord } from './types';
+import { getStaticQuestions } from './data/staticQuestions';
+import { generateQuestionsForGame } from './services/geminiService';
+import StartScreen from './components/StartScreen';
+import GameScreen from './components/GameScreen';
+import GameOverScreen from './components/GameOverScreen';
+import HighScoresScreen from './components/HighScoresScreen';
+import ApiKeyScreen from './components/ApiKeyScreen';
+import Loader from './components/common/Loader';
+import { QUESTIONS_PER_ROUND } from './constants';
+import useLocalStorage from './hooks/useLocalStorage';
+import useSessionStorage from './hooks/useSessionStorage';
 
-const App = () => {
-  const [gameState, setGameState] = useState(GameState.START);
-  const [difficulty, setDifficulty] = useState(Difficulty.MEDIUM);
-  const [questions, setQuestions] = useState([]);
+const App: React.FC = () => {
+  const [gameState, setGameState] = useState<GameState>(GameState.START);
+  const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [highScores, setHighScores] = useLocalStorage('grammar-guardians-scores', []);
-  const [lastRoundHistory, setLastRoundHistory] = useState([]);
-  const [apiKey, setApiKey] = useSessionStorage('gemini-api-key', null);
+  const [error, setError] = useState<string | null>(null);
+  const [highScores, setHighScores] = useLocalStorage<Score[]>('grammar-guardians-scores', []);
+  const [lastRoundHistory, setLastRoundHistory] = useState<AnswerRecord[]>([]);
+  const [apiKey, setApiKey] = useSessionStorage<string | null>('gemini-api-key', null);
 
-  const startGame = useCallback(async (selectedDifficulty, isDynamic) => {
+  const startGame = useCallback(async (selectedDifficulty: Difficulty, isDynamic: boolean) => {
     setIsLoading(true);
     setError(null);
     setDifficulty(selectedDifficulty);
 
     try {
-      let fetchedQuestions;
+      let fetchedQuestions: Question[];
       if (isDynamic) {
         if (!apiKey) throw new Error("API Key is not set.");
         fetchedQuestions = await generateQuestionsForGame(apiKey, selectedDifficulty);
@@ -55,12 +54,12 @@ const App = () => {
     }
   }, [apiKey]);
 
-  const handleAnswer = (details) => {
+  const handleAnswer = (details: { userAnswer: string; isCorrect: boolean }) => {
     if (details.isCorrect) {
       setScore(prev => prev + 1);
     }
     const currentQuestion = questions[currentQuestionIndex];
-    const record = {
+    const record: AnswerRecord = {
       question: currentQuestion,
       userAnswer: details.userAnswer,
       isCorrect: details.isCorrect,
@@ -76,8 +75,8 @@ const App = () => {
     }
   };
 
-  const saveHighScore = useCallback((finalScore, name) => {
-    const newScore = { name, score: finalScore, date: new Date().toISOString().split('T')[0], difficulty };
+  const saveHighScore = useCallback((finalScore: number, name: string) => {
+    const newScore: Score = { name, score: finalScore, date: new Date().toISOString().split('T')[0], difficulty };
     const newHighScores = [...highScores, newScore]
       .sort((a, b) => b.score - a.score || a.date.localeCompare(b.date))
       .slice(0, 10);
@@ -88,7 +87,7 @@ const App = () => {
     setGameState(GameState.START);
   };
   
-  const handleKeySubmit = (key) => {
+  const handleKeySubmit = (key: string) => {
     setApiKey(key);
   };
 

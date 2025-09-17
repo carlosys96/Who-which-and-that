@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { Difficulty, QuestionType } from '../types';
-import { GAME_TITLE } from '../constants';
-import Button from './common/Button';
-import Card from './common/Card';
+import { Difficulty, QuestionType } from '../types.js';
+import { GAME_TITLE } from '../constants.js';
+import Button from './common/Button.js';
+import Card from './common/Card.js';
 
 const ReviewModal = ({ history, onClose }) => {
     return (

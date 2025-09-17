@@ -1,7 +1,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { QuestionType } from '../types';
-import { QUESTIONS_PER_ROUND } from '../constants';
+import { QuestionType } from '../types.js';
+import { QUESTIONS_PER_ROUND } from '../constants.js';
 
 const questionSchema = {
     type: Type.ARRAY,

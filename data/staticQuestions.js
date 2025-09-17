@@ -1,6 +1,6 @@
 
-import { Difficulty, QuestionType } from '../types';
-import { QUESTIONS_PER_ROUND } from '../constants';
+import { Difficulty, QuestionType } from '../types.js';
+import { QUESTIONS_PER_ROUND } from '../constants.js';
 
 const shuffleArray = (array) => {
   const newArray = [...array];

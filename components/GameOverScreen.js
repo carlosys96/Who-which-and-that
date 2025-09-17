@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import Button from './common/Button';
-import Card from './common/Card';
+import Button from './common/Button.js';
+import Card from './common/Card.js';
 
 const getPerformanceMessage = (score, total) => {
     const percentage = (score / total) * 100;

@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { QuestionType } from '../types';
-import { validateSentenceWithAI } from '../services/geminiService';
-import Button from './common/Button';
-import Card from './common/Card';
-import Loader from './common/Loader';
+import { QuestionType } from '../types.js';
+import { validateSentenceWithAI } from '../services/geminiService.js';
+import Button from './common/Button.js';
+import Card from './common/Card.js';
+import Loader from './common/Loader.js';
 
 const GameScreen = ({ question, onAnswer, onNextQuestion, questionNumber, totalQuestions, score, apiKey }) => {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
