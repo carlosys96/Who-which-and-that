@@ -1,13 +1,16 @@
 import React, { useState, useCallback } from 'react';
 import { GameState, Difficulty, Question, Score, AnswerRecord } from './types';
 import { getStaticQuestions } from './data/staticQuestions';
+import { generateQuestionsForGame } from './services/geminiService';
 import StartScreen from './components/StartScreen';
 import GameScreen from './components/GameScreen';
 import GameOverScreen from './components/GameOverScreen';
 import HighScoresScreen from './components/HighScoresScreen';
+import ApiKeyScreen from './components/ApiKeyScreen';
 import Loader from './components/common/Loader';
 import { QUESTIONS_PER_ROUND } from './constants';
 import useLocalStorage from './hooks/useLocalStorage';
+import useSessionStorage from './hooks/useSessionStorage';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.START);
@@ -19,32 +22,37 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [highScores, setHighScores] = useLocalStorage<Score[]>('grammar-guardians-scores', []);
   const [lastRoundHistory, setLastRoundHistory] = useState<AnswerRecord[]>([]);
+  const [apiKey, setApiKey] = useSessionStorage<string | null>('gemini-api-key', null);
 
-  const startGame = useCallback((selectedDifficulty: Difficulty) => {
+  const startGame = useCallback(async (selectedDifficulty: Difficulty, isDynamic: boolean) => {
     setIsLoading(true);
     setError(null);
     setDifficulty(selectedDifficulty);
 
-    // Simulate a short delay for a smoother loading experience
-    setTimeout(() => {
-      try {
-        const fetchedQuestions = getStaticQuestions(selectedDifficulty);
-        if (fetchedQuestions.length < QUESTIONS_PER_ROUND) {
-            throw new Error("Not enough questions available for this difficulty.");
-        }
-        setQuestions(fetchedQuestions);
-        setCurrentQuestionIndex(0);
-        setScore(0);
-        setLastRoundHistory([]);
-        setGameState(GameState.PLAYING);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to start the game.');
-        setGameState(GameState.START);
-      } finally {
-        setIsLoading(false);
+    try {
+      let fetchedQuestions: Question[];
+      if (isDynamic) {
+        if (!apiKey) throw new Error("API Key is not set.");
+        fetchedQuestions = await generateQuestionsForGame(apiKey, selectedDifficulty);
+      } else {
+        fetchedQuestions = getStaticQuestions(selectedDifficulty);
       }
-    }, 500);
-  }, []);
+      
+      if (fetchedQuestions.length < QUESTIONS_PER_ROUND) {
+          throw new Error("Not enough questions available for this difficulty.");
+      }
+      setQuestions(fetchedQuestions);
+      setCurrentQuestionIndex(0);
+      setScore(0);
+      setLastRoundHistory([]);
+      setGameState(GameState.PLAYING);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start the game.');
+      setGameState(GameState.START);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [apiKey]);
 
   const handleAnswer = (details: { userAnswer: string; isCorrect: boolean }) => {
     if (details.isCorrect) {
@@ -74,10 +82,13 @@ const App: React.FC = () => {
       .slice(0, 10);
     setHighScores(newHighScores);
   }, [highScores, difficulty, setHighScores]);
-  
 
   const restartGame = () => {
     setGameState(GameState.START);
+  };
+  
+  const handleKeySubmit = (key: string) => {
+    setApiKey(key);
   };
 
   const viewHighScores = () => {
@@ -85,6 +96,10 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
+    if (!apiKey) {
+      return <ApiKeyScreen onKeySubmit={handleKeySubmit} />;
+    }
+    
     if (isLoading) {
       return <Loader message="Preparing your grammar challenge..." />;
     }
@@ -99,6 +114,7 @@ const App: React.FC = () => {
             questionNumber={currentQuestionIndex + 1}
             totalQuestions={QUESTIONS_PER_ROUND}
             score={score}
+            apiKey={apiKey}
           />
         );
       case GameState.GAME_OVER:

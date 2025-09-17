@@ -5,7 +5,7 @@ import Button from './common/Button';
 import Card from './common/Card';
 
 interface StartScreenProps {
-  onStartGame: (difficulty: Difficulty) => void;
+  onStartGame: (difficulty: Difficulty, isDynamic: boolean) => void;
   onShowScores: () => void;
   error: string | null;
   scores: Score[];
@@ -24,7 +24,6 @@ const ReviewModal: React.FC<{history: AnswerRecord[]; onClose: () => void}> = ({
                     {history.map((record, index) => (
                         <div key={index} className="bg-slate-900/70 p-4 rounded-lg border border-slate-700">
                             <p className="font-semibold text-slate-300 mb-2">Question {index + 1}</p>
-                            {/* FIX: Handle different question types to prevent crashes if `sentence` is missing. */}
                             <p className="text-lg text-white mb-3 bg-slate-700/50 p-3 rounded">
                                 {record.question.type === QuestionType.FILL_IN_THE_BLANK && record.question.sentence
                                     ? record.question.sentence.replace('___', `[${record.question.correctAnswer}]`)
@@ -50,6 +49,7 @@ const ReviewModal: React.FC<{history: AnswerRecord[]; onClose: () => void}> = ({
 
 const StartScreen: React.FC<StartScreenProps> = ({ onStartGame, onShowScores, error, scores, roundHistory }) => {
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
+  const [isDynamicMode, setIsDynamicMode] = useState(true);
   const [showReview, setShowReview] = useState(false);
 
   const difficultyOptions: { value: Difficulty; label: string; description: string }[] = [
@@ -67,7 +67,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStartGame, onShowScores, er
           
           {error && <p className="bg-red-900/50 text-red-300 p-3 rounded-md mb-6">{error}</p>}
           
-          <div className="mb-8">
+          <div className="mb-6">
             <h2 className="text-2xl font-semibold text-slate-200 mb-4">Choose your difficulty:</h2>
             <div className="grid grid-cols-3 gap-4">
               {difficultyOptions.map(({ value, label, description }) => (
@@ -86,9 +86,18 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStartGame, onShowScores, er
               ))}
             </div>
           </div>
+          
+           <div className="mb-8 flex items-center justify-center gap-4 bg-slate-700/50 p-4 rounded-lg">
+                <span className={`font-semibold transition-colors ${!isDynamicMode ? 'text-cyan-400' : 'text-slate-400'}`}>Classic Mode</span>
+                <label htmlFor="game-mode-toggle" className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="game-mode-toggle" className="sr-only peer" checked={isDynamicMode} onChange={() => setIsDynamicMode(!isDynamicMode)} />
+                    <div className="w-14 h-8 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-cyan-600"></div>
+                </label>
+                <span className={`font-semibold transition-colors ${isDynamicMode ? 'text-cyan-400' : 'text-slate-400'}`}>Dynamic AI Mode</span>
+            </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button onClick={() => onStartGame(selectedDifficulty)} variant="primary" className="w-full sm:w-auto">
+            <Button onClick={() => onStartGame(selectedDifficulty, isDynamicMode)} variant="primary" className="w-full sm:w-auto">
               Start Game
             </Button>
             <Button onClick={onShowScores} variant="secondary" className="w-full sm:w-auto">

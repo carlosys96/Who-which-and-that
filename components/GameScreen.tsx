@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Question, QuestionType } from '../types';
+import { validateSentenceWithAI } from '../services/geminiService';
 import Button from './common/Button';
 import Card from './common/Card';
 import Loader from './common/Loader';
@@ -11,19 +12,24 @@ interface GameScreenProps {
   questionNumber: number;
   totalQuestions: number;
   score: number;
+  apiKey: string;
 }
 
-const GameScreen: React.FC<GameScreenProps> = ({ question, onAnswer, onNextQuestion, questionNumber, totalQuestions, score }) => {
+const GameScreen: React.FC<GameScreenProps> = ({ question, onAnswer, onNextQuestion, questionNumber, totalQuestions, score, apiKey }) => {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [userSentence, setUserSentence] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [answered, setAnswered] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
     setSelectedAnswer(null);
+    setUserSentence('');
     setFeedback(null);
     setIsCorrect(null);
     setAnswered(false);
+    setIsVerifying(false);
   }, [question]);
 
   const handleFillInBlankSubmit = (option: string) => {
@@ -36,10 +42,22 @@ const GameScreen: React.FC<GameScreenProps> = ({ question, onAnswer, onNextQuest
     onAnswer({ userAnswer: option, isCorrect: correct });
   };
 
+  const handleWriteSentenceSubmit = async () => {
+    if (answered || !userSentence.trim()) return;
+    
+    setIsVerifying(true);
+    setAnswered(true);
+    const result = await validateSentenceWithAI(apiKey, userSentence, question.correctAnswer);
+    setIsVerifying(false);
+
+    setIsCorrect(result.isValid);
+    setFeedback(result.feedback);
+    onAnswer({ userAnswer: userSentence, isCorrect: result.isValid });
+  };
+
   const renderFillInTheBlank = () => {
-    // FIX: Add a guard for question.sentence, which is now optional to support new question types.
-    if (question.type !== QuestionType.FILL_IN_THE_BLANK || !question.sentence) {
-        return <div className="text-center text-slate-300">This question type is not supported yet.</div>;
+    if (!question.sentence) {
+        return <div className="text-center text-slate-300">Invalid question format.</div>;
     }
     const parts = question.sentence.split('___');
     return (
@@ -75,6 +93,43 @@ const GameScreen: React.FC<GameScreenProps> = ({ question, onAnswer, onNextQuest
     );
   };
 
+  const renderWriteSentence = () => {
+     if (!question.prompt) {
+        return <div className="text-center text-slate-300">Invalid question format.</div>;
+    }
+    return (
+        <div>
+            <div className="bg-slate-700/50 p-6 rounded-lg mb-6 text-center">
+                <p className="text-xl text-slate-200 leading-relaxed">{question.prompt}</p>
+            </div>
+            <textarea
+                value={userSentence}
+                onChange={(e) => setUserSentence(e.target.value)}
+                placeholder={`Write your sentence here...`}
+                className="w-full p-3 bg-slate-700 border-2 border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition duration-200 text-lg mb-4 min-h-[100px]"
+                aria-label="Sentence input"
+                disabled={answered}
+            />
+            <Button onClick={handleWriteSentenceSubmit} disabled={answered || !userSentence.trim()} className="w-full">
+                Check My Sentence
+            </Button>
+        </div>
+    )
+  }
+
+  const renderQuestion = () => {
+    if (!question) return <Loader message="Loading question..." />;
+
+    switch(question.type) {
+        case QuestionType.FILL_IN_THE_BLANK:
+            return renderFillInTheBlank();
+        case QuestionType.WRITE_SENTENCE:
+            return renderWriteSentence();
+        default:
+            return <div className="text-center text-slate-300">Unsupported question type.</div>;
+    }
+  }
+
   return (
     <Card>
       <div className="mb-6 flex justify-between items-center text-slate-300">
@@ -82,16 +137,18 @@ const GameScreen: React.FC<GameScreenProps> = ({ question, onAnswer, onNextQuest
         <span className="font-semibold text-xl text-cyan-400">Score: {score}</span>
       </div>
       
-      {!question ? <Loader message="Loading question..." /> : renderFillInTheBlank()}
+      {renderQuestion()}
 
-      {feedback && (
+      {isVerifying && <Loader message="AI is checking your answer..." />}
+
+      {feedback && !isVerifying && (
         <div className={`mt-6 p-4 rounded-lg text-center transition-opacity duration-500 ${isCorrect ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'}`}>
-          <h3 className="font-bold text-lg mb-1">{isCorrect ? 'Correct!' : 'Not Quite!'}</h3>
+          <h3 className="font-bold text-lg mb-1">{isCorrect ? 'Correct!' : 'Needs Improvement!'}</h3>
           <p>{feedback}</p>
         </div>
       )}
 
-      {answered && (
+      {answered && !isVerifying && (
         <div className="mt-6 text-center">
             <Button onClick={onNextQuestion} variant="primary">
                 {questionNumber === totalQuestions ? 'Finish Round' : 'Next Question'}
